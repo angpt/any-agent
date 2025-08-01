@@ -1,6 +1,7 @@
 # mypy: disable-error-code="method-assign,misc,no-untyped-call,no-untyped-def,union-attr"
 from __future__ import annotations
 
+import inspect
 from copy import deepcopy
 from typing import TYPE_CHECKING, Any
 
@@ -43,12 +44,18 @@ class _TinyAgentWrapper:
                 get_current_span().get_span_context().trace_id
             ]
             for callback in agent.config.callbacks:
-                context = callback.before_tool_execution(context, request)
+                if inspect.iscoroutinefunction(callback.before_tool_execution):
+                    context = await callback.before_tool_execution(context, request)
+                else:
+                    context = callback.before_tool_execution(context, request)
 
             output = await original_call(request)
 
             for callback in agent.config.callbacks:
-                context = callback.after_tool_execution(context, output)
+                if inspect.iscoroutinefunction(callback.after_tool_execution):
+                    context = await callback.after_tool_execution(context, output)
+                else:
+                    context = callback.after_tool_execution(context, output)
 
             return output
 

@@ -53,6 +53,48 @@ class SampleCallback(Callback):
         return context
 
 
+class AsyncCallback(Callback):
+    def __init__(self) -> None:
+        self.before_agent_invocation_called = False
+        self.after_agent_invocation_called = False
+        self.before_llm_called = False
+        self.after_llm_called = False
+        self.before_tool_called = False
+        self.after_tool_called = False
+
+    def after_agent_invocation(
+        self, context: Context, *args: Any, **kwargs: Any
+    ) -> Context:
+        self.after_agent_invocation_called = True
+        return context
+
+    def after_llm_call(self, context: Context, *args: Any, **kwargs: Any) -> Context:
+        self.after_llm_called = True
+        return context
+
+    async def after_tool_execution(  # type: ignore[override]
+        self, context: Context, *args: Any, **kwargs: Any
+    ) -> Context:
+        self.after_tool_called = True
+        return context
+
+    def before_agent_invocation(
+        self, context: Context, *args: Any, **kwargs: Any
+    ) -> Context:
+        self.before_agent_invocation_called = True
+        return context
+
+    async def before_tool_execution(  # type: ignore[override]
+        self, context: Context, *args: Any, **kwargs: Any
+    ) -> Context:
+        self.before_tool_called = True
+        return context
+
+    def before_llm_call(self, context: Context, *args: Any, **kwargs: Any) -> Context:
+        self.before_llm_called = True
+        return context
+
+
 class ExceptionCallback(SampleCallback):
     """Callback that throws an exception in before_llm_call."""
 
@@ -114,6 +156,28 @@ def run_agent_with_mock(
 
 def test_callbacks(mock_litellm_response: Any) -> None:
     callback = SampleCallback()
+    agent = create_agent(
+        instructions="Use the available tools to find information when needed",
+        callbacks=[callback],
+    )
+
+    run_agent_with_mock(
+        agent=agent,
+        prompt="Search for information about the latest AI developments and summarize what you find",
+        mock_response=mock_litellm_response,
+    )
+
+    # Verify that the callback methods were called
+    assert callback.before_agent_invocation_called
+    assert callback.after_agent_invocation_called
+    assert callback.before_llm_called
+    assert callback.after_llm_called
+    assert callback.before_tool_called is False
+    assert callback.after_tool_called is False
+
+
+async def test_async_callbacks(mock_litellm_response: Any) -> None:
+    callback = AsyncCallback()
     agent = create_agent(
         instructions="Use the available tools to find information when needed",
         callbacks=[callback],

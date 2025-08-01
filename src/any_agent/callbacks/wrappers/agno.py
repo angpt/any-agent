@@ -1,6 +1,7 @@
 # mypy: disable-error-code="method-assign,no-untyped-def,union-attr"
 from __future__ import annotations
 
+import inspect
 from typing import TYPE_CHECKING, Any
 
 from opentelemetry.trace import get_current_span
@@ -48,14 +49,24 @@ class _AgnoWrapper:
             ]
 
             for callback in agent.config.callbacks:
-                context = callback.before_tool_execution(context, *args, **kwargs)
+                if inspect.iscoroutinefunction(callback.before_tool_execution):
+                    context = await callback.before_tool_execution(
+                        context, *args, **kwargs
+                    )
+                else:
+                    context = callback.before_tool_execution(context, *args, **kwargs)
 
             result = await self._original_arun_function_call(*args, **kwargs)
 
             for callback in agent.config.callbacks:
-                context = callback.after_tool_execution(
-                    context, result, *args, **kwargs
-                )
+                if inspect.iscoroutinefunction(callback.after_tool_execution):
+                    context = await callback.after_tool_execution(
+                        context, result, *args, **kwargs
+                    )
+                else:
+                    context = callback.after_tool_execution(
+                        context, result, *args, **kwargs
+                    )
 
             return result
 

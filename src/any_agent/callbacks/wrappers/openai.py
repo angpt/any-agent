@@ -1,6 +1,7 @@
 # mypy: disable-error-code="misc,method-assign,no-untyped-def,no-untyped-call,union-attr"
 from __future__ import annotations
 
+import inspect
 from typing import TYPE_CHECKING, Any
 
 from opentelemetry.trace import get_current_span
@@ -55,15 +56,20 @@ class _OpenAIAgentsWrapper:
             context.shared["original_tool"] = original_tool
 
             for callback in agent.config.callbacks:
-                context = callback.before_tool_execution(context, *args, **kwargs)
+                if inspect.iscoroutinefunction(callback.before_tool_execution):
+                    context = await callback.before_tool_execution(
+                        context, *args, **kwargs
+                    )
+                else:
+                    context = callback.before_tool_execution(context, *args, **kwargs)
 
             output = await original_invoke(*args, **kwargs)
 
             for callback in agent.config.callbacks:
-                context = callback.after_tool_execution(
-                    context,
-                    output,
-                )
+                if inspect.iscoroutinefunction(callback.after_tool_execution):
+                    context = await callback.after_tool_execution(context, output)
+                else:
+                    context = callback.after_tool_execution(context, output)
 
             return output
 

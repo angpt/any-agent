@@ -1,9 +1,11 @@
 # mypy: disable-error-code="method-assign,misc,no-untyped-call,no-untyped-def,union-attr"
 from __future__ import annotations
 
+import inspect
 from typing import TYPE_CHECKING, Any
 
 from opentelemetry.trace import get_current_span
+from any_agent.utils.asyncio_sync import run_async_in_sync
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -33,12 +35,17 @@ class _LangChainWrapper:
             for callback in agent.config.callbacks:
                 context = callback.before_llm_call(context, *args, **kwargs)
 
-        def before_tool_execution(*args, **kwargs):
+        async def before_tool_execution(*args, **kwargs):
             context = self.callback_context[
                 get_current_span().get_span_context().trace_id
             ]
             for callback in agent.config.callbacks:
-                context = callback.before_tool_execution(context, *args, **kwargs)
+                if inspect.iscoroutinefunction(callback.before_tool_execution):
+                    context = await callback.before_tool_execution(
+                        context, *args, **kwargs
+                    )
+                else:
+                    context = callback.before_tool_execution(context, *args, **kwargs)
 
         def after_llm_call(*args, **kwargs):
             context = self.callback_context[
@@ -47,12 +54,17 @@ class _LangChainWrapper:
             for callback in agent.config.callbacks:
                 context = callback.after_llm_call(context, *args, **kwargs)
 
-        def after_tool_execution(*args, **kwargs):
+        async def after_tool_execution(*args, **kwargs):
             context = self.callback_context[
                 get_current_span().get_span_context().trace_id
             ]
             for callback in agent.config.callbacks:
-                context = callback.after_tool_execution(context, *args, **kwargs)
+                if inspect.iscoroutinefunction(callback.after_tool_execution):
+                    context = await callback.after_tool_execution(
+                        context, *args, **kwargs
+                    )
+                else:
+                    context = callback.after_tool_execution(context, *args, **kwargs)
 
         class _LangChainTracingCallback(BaseCallbackHandler):
             def on_chat_model_start(
@@ -80,7 +92,7 @@ class _LangChainWrapper:
                 inputs: dict[str, Any] | None = None,
                 **kwargs: Any,
             ) -> Any:
-                before_tool_execution(serialized, input_str, inputs=inputs, **kwargs)
+                run_async_in_sync(before_tool_execution(serialized, input_str, inputs=inputs, **kwargs))
 
             def on_llm_end(
                 self,
@@ -100,7 +112,7 @@ class _LangChainWrapper:
                 parent_run_id: UUID | None = None,
                 **kwargs: Any,
             ) -> Any:
-                after_tool_execution(output, **kwargs)
+                run_async_in_sync(after_tool_execution(output, **kwargs))
 
         tracing_callback = _LangChainTracingCallback()
 

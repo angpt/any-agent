@@ -1,6 +1,7 @@
 # mypy: disable-error-code="no-untyped-def,union-attr"
 from __future__ import annotations
 
+import inspect
 from typing import TYPE_CHECKING, Any
 
 from opentelemetry.trace import get_current_span
@@ -52,13 +53,18 @@ class _GoogleADKWrapper:
 
         self._original["before_tool"] = agent._agent.before_tool_callback
 
-        def before_tool_callback(*args, **kwargs) -> Any | None:
+        async def before_tool_callback(*args, **kwargs) -> Any | None:
             context = self.callback_context[
                 get_current_span().get_span_context().trace_id
             ]
 
             for callback in agent.config.callbacks:
-                context = callback.before_tool_execution(context, *args, **kwargs)
+                if inspect.iscoroutinefunction(callback.before_tool_execution):
+                    context = await callback.before_tool_execution(
+                        context, *args, **kwargs
+                    )
+                else:
+                    context = callback.before_tool_execution(context, *args, **kwargs)
 
             if callable(self._original["before_tool"]):
                 return self._original["before_tool"](*args, **kwargs)
@@ -69,16 +75,21 @@ class _GoogleADKWrapper:
 
         self._original["after_tool"] = agent._agent.after_tool_callback
 
-        def after_tool_callback(*args, **kwarg) -> Any | None:
+        async def after_tool_callback(*args, **kwargs) -> Any | None:
             context = self.callback_context[
                 get_current_span().get_span_context().trace_id
             ]
 
             for callback in agent.config.callbacks:
-                context = callback.after_tool_execution(context, *args, **kwarg)
+                if inspect.iscoroutinefunction(callback.after_tool_execution):
+                    context = await callback.after_tool_execution(
+                        context, *args, **kwargs
+                    )
+                else:
+                    context = callback.after_tool_execution(context, *args, **kwargs)
 
             if callable(self._original["after_tool"]):
-                return self._original["after_tool"](*args, **kwarg)
+                return self._original["after_tool"](*args, **kwargs)
 
             return None
 
