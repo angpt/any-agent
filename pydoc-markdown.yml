@@ -1,0 +1,31 @@
+loaders:
+  - type: python
+    search_path: [src]
+    modules:
+      - any_agent
+    ignore_when_discovered:
+      - "**/vendor/**"
+      - "**/tests/**"
+
+processors:
+  - type: filter
+    skip_empty_modules: true
+  - type: smart
+  - type: crossref
+
+renderer:
+  type: markdown
+  render_module_header: false
+  descriptive_class_title: false
+  descriptive_module_title: false
+  add_method_class_prefix: false
+  add_member_class_prefix: false
+  data_code_block: true
+  signature_with_decorators: false
+  render_toc: true
+  toc_maxlevel: 3
+
+# Output configuration for different modules
+hooks:
+  pre-render:
+    - echo "Generating API documentation..."

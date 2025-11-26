@@ -44,10 +44,38 @@ jobs:
         run: |
           uv sync -U --group docs
 
-      - name: Build docs
-        if: github.event_name == 'pull_request'
-        run: mkdocs build -s
-
-      - name: Publish docs
+      - name: Generate GitBook API docs
         if: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' }}
-        run: mkdocs gh-deploy
+        run: uv run python scripts/convert_to_gitbook.py
+
+      - name: Deploy to gitbook-docs branch
+        if: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' }}
+        run: |
+          # Save generated docs and config files
+          mkdir -p /tmp/gitbook-docs
+          cp -r docs/* /tmp/gitbook-docs/
+          cp .gitbook.yaml /tmp/gitbook-docs/
+          cp .gitbook-branch-readme.md /tmp/gitbook-docs/README-BRANCH.md
+
+          # Switch to gitbook-docs branch (create if doesn't exist)
+          git fetch origin gitbook-docs || true
+          if git rev-parse --verify origin/gitbook-docs >/dev/null 2>&1; then
+            git checkout gitbook-docs
+          else
+            git checkout --orphan gitbook-docs
+            git rm -rf .
+          fi
+
+          # Copy generated docs and config
+          cp -r /tmp/gitbook-docs/* .
+          cp -r /tmp/gitbook-docs/.gitbook.yaml .
+
+          # Commit and push
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -m "docs: update GitBook documentation
+
+          🤖 Generated from commit ${{ github.sha }}
+          📝 Generated with GitHub Actions"
+            git push origin gitbook-docs
+          fi
