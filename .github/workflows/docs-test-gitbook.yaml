@@ -1,0 +1,56 @@
+name: Test GitBook Migration
+
+on:
+  push:
+    branches: [test-gitbook-docs]
+  workflow_dispatch:
+
+jobs:
+  test-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install uv and Python
+        uses: astral-sh/setup-uv@v3
+        with:
+          python-version: 3.13
+
+      - name: Install dependencies
+        run: uv sync --group docs
+
+      - name: Build Documentation (Test)
+        run: |
+          # 1. Run your new generation logic
+          uv run pydoc-markdown -p pydoc-markdown.yml > site/api-reference.md
+
+          # 2. Prepare site folder
+          mkdir -p site
+          # Copy docs (ensure this path matches your repo structure)
+          cp -r docs/* site/
+
+          # 3. Create a Dummy Summary for testing if one doesn't exist
+          # If SUMMARY.md doesn't exist, create it
+          if [ ! -f site/SUMMARY.md ]; then
+            echo "# Table of Contents" > site/SUMMARY.md
+            echo "" >> site/SUMMARY.md
+
+            # Add existing static files to summary (simple loop)
+            find site -maxdepth 1 -name "*.md" ! -name "SUMMARY.md" ! -name "api-reference.md" | sort | while read filename; do
+                name=$(basename "$filename" .md)
+                echo "* [$name]($name.md)" >> site/SUMMARY.md
+            done
+          fi
+
+      - name: Deploy to STAGING Branch
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./site
+          publish_branch: gitbook-staging # SAFE THROWAWAY BRANCH
+          force_orphan: true
