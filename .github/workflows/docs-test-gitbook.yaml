@@ -26,6 +26,7 @@ jobs:
         run: |
           uv sync --group docs
           uv pip install lazydocs
+          uv pip install -e .
 
       - name: Build Documentation (Test)
         run: |
@@ -34,15 +35,16 @@ jobs:
           mkdir -p site
 
           # Copy docs
-          cp -r docs/* site/
-          rm -fr site/api
+          if [ -d "docs" ]; then
+            rsync -av --exclude='api' docs/ site/
+          fi
 
           # 2. Generate actual markdown files for 'any_agent'
           # This replaces pydoc-markdown. It reads your code and outputs .md files.
           uv run lazydocs \
             --output-path site/api \
             --overview-file README.md \
-            --src-base-url "https://github.com/angpt/any-agent/blob/main/" \
+            --src-base-url "https://github.com/angpt/any-agent/blob/${{ github.sha }}" \
             src/any_agent
 
           # 3. Create a Dummy Summary for testing if one doesn't exist
@@ -51,11 +53,23 @@ jobs:
             echo "# Table of Contents" > site/SUMMARY.md
             echo "" >> site/SUMMARY.md
 
-            # Add existing static files to summary (simple loop)
-            find site -maxdepth 1 -name "*.md" ! -name "SUMMARY.md" ! -name "api-reference.md" | sort | while read filename; do
-                name=$(basename "$filename" .md)
-                echo "* [$name]($name.md)" >> site/SUMMARY.md
-            done
+            # Add Guides (from manual docs)
+          echo "## Guides" >> site/SUMMARY.md
+          find site -maxdepth 1 -name "*.md" ! -name "SUMMARY.md" | sort | while read filename; do
+            name=$(basename "$filename" .md)
+            echo "* [$name]($name.md)" >> site/SUMMARY.md
+          done
+
+          # Add API Reference (from lazydocs)
+          echo "" >> site/SUMMARY.md
+          echo "## API Reference" >> site/SUMMARY.md
+          echo "* [Overview](api/README.md)" >> site/SUMMARY.md
+
+          find site/api -name "*.md" ! -name "README.md" | sort | while read filename; do
+            relpath=${filename#site/}
+            name=$(basename "$filename" .md)
+            echo "* [$name]($relpath)" >> site/SUMMARY.md
+          done
           fi
 
           # Add Manual Guides (everything except the api folder)
