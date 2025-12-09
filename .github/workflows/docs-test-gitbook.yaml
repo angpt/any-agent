@@ -30,6 +30,7 @@ jobs:
       - name: Build Documentation (Test)
         run: |
           # 1. Prepare site folder
+          rm -fr site
           mkdir -p site/api-reference
 
           # 2. Generate actual markdown files for 'any_agent'
@@ -37,7 +38,7 @@ jobs:
           uv run lazydocs \
             --output-path site/api-reference \
             --overview-file README.md \
-            --src-base-url "https://github.com/YOUR_ORG/any-agent/blob/main/" \
+            --src-base-url "https://github.com/angpt/any-agent/blob/main/" \
             src/any_agent
 
           # Copy docs
