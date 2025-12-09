@@ -31,18 +31,19 @@ jobs:
         run: |
           # 1. Prepare site folder
           rm -fr site
-          mkdir -p site/api-reference
+          mkdir -p site
+
+          # Copy docs
+          cp -r docs/* site/
+          rm -fr site/api
 
           # 2. Generate actual markdown files for 'any_agent'
           # This replaces pydoc-markdown. It reads your code and outputs .md files.
           uv run lazydocs \
-            --output-path site/api-reference \
+            --output-path site/api \
             --overview-file README.md \
             --src-base-url "https://github.com/angpt/any-agent/blob/main/" \
             src/any_agent
-
-          # Copy docs
-          cp -r docs/* site/
 
           # 3. Create a Dummy Summary for testing if one doesn't exist
           # If SUMMARY.md doesn't exist, create it
@@ -56,6 +57,26 @@ jobs:
                 echo "* [$name]($name.md)" >> site/SUMMARY.md
             done
           fi
+
+          # Add Manual Guides (everything except the api folder)
+          echo "## Guides" >> site/SUMMARY.md
+          find site -maxdepth 1 -name "*.md" ! -name "SUMMARY.md" | sort | while read filename; do
+            name=$(basename "$filename" .md)
+            echo "* [$name]($name.md)" >> site/SUMMARY.md
+          done
+
+          # Add API Reference (The new generated files)
+          echo "" >> site/SUMMARY.md
+          echo "## API Reference" >> site/SUMMARY.md
+          echo "* [Overview](api/README.md)" >> site/SUMMARY.md
+
+          # Add all generated module files
+          find site/api -name "*.md" ! -name "README.md" | sort | while read filename; do
+            # Calculate relative path (e.g. api/module_name.md)
+            relpath=${filename#site/}
+            name=$(basename "$filename" .md)
+            echo "* [$name]($relpath)" >> site/SUMMARY.md
+          done
 
       - name: Deploy to STAGING Branch
         uses: peaceiris/actions-gh-pages@v3
