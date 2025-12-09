@@ -15,8 +15,9 @@ processors:
 
 renderer:
   type: markdown
-  render_module_header: false
-  descriptive_class_title: false
+  render_module_header: true
+  descriptive_class_title: true
+  insert_header_anchors: false
   descriptive_module_title: false
   add_method_class_prefix: false
   add_member_class_prefix: false

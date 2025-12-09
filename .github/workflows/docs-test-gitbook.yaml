@@ -23,17 +23,25 @@ jobs:
           activate-environment: true
 
       - name: Install dependencies
-        run: uv sync --group docs
+        run: |
+          uv sync --group docs
+          uv pip install lazydocs
 
       - name: Build Documentation (Test)
         run: |
           # 1. Prepare site folder
-          mkdir -p site
-          # Copy docs (ensure this path matches your repo structure)
-          cp -r docs/* site/
+          mkdir -p site/api-reference
 
-          # 2. Run your new generation logic
-          uv run pydoc-markdown -p pydoc-markdown.yml > site/api-reference.md
+          # 2. Generate actual markdown files for 'any_agent'
+          # This replaces pydoc-markdown. It reads your code and outputs .md files.
+          uv run lazydocs \
+            --output-path site/api-reference \
+            --overview-file README.md \
+            --src-base-url "https://github.com/YOUR_ORG/any-agent/blob/main/" \
+            src/any_agent
+
+          # Copy docs
+          cp -r docs/* site/
 
           # 3. Create a Dummy Summary for testing if one doesn't exist
           # If SUMMARY.md doesn't exist, create it
