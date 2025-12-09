@@ -27,13 +27,13 @@ jobs:
 
       - name: Build Documentation (Test)
         run: |
-          # 1. Run your new generation logic
-          uv run pydoc-markdown -p pydoc-markdown.yml > site/api-reference.md
-
-          # 2. Prepare site folder
+          # 1. Prepare site folder
           mkdir -p site
           # Copy docs (ensure this path matches your repo structure)
           cp -r docs/* site/
+
+          # 2. Run your new generation logic
+          uv run pydoc-markdown -p pydoc-markdown.yml > site/api-reference.md
 
           # 3. Create a Dummy Summary for testing if one doesn't exist
           # If SUMMARY.md doesn't exist, create it
