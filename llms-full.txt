@@ -82,7 +82,7 @@ Check [`AgentConfig`][any_agent.config.AgentConfig] for more info on how to conf
 agent = AnyAgent.create(
     "openai",  # See other options under `Frameworks`
     AgentConfig(
-        model_id="mistral/mistral-small-latest",
+        model_id="mistral:mistral-small-latest",
         instructions="Use the tools to find an answer",
         tools=[search_web, visit_webpage]
     ),
@@ -102,59 +102,9 @@ Multi-Agent systems can be implemented [using Agent-As-Tools](./tools.md#using-a
 
 ### Framework Specific Arguments
 
-Sometimes, there may be a new feature in a framework that you want to use that isn't yet supported universally in any-agent. The `agent_args` parameter in `AgentConfig` allows you to pass arguments specific to the underlying framework that the agent instance is built on.
+Sometimes, there may be a new feature in a framework that you want to use that isn't yet supported universally in any-agent.
 
-**Example-1**: To pass the `output_guardrails` parameter, when using the OpenAI Agents SDK:
-
-```python
-from pydantic import BaseModel
-from any_agent import AgentConfig, AgentFramework, AnyAgent
-from agents import (
-    Agent,
-    GuardrailFunctionOutput,
-    OutputGuardrailTripwireTriggered,
-    RunContextWrapper,
-    Runner,
-    output_guardrail,
-)
-
-class MessageOutput(BaseModel):
-    response: str
-
-class MathOutput(BaseModel):
-    reasoning: str
-    is_math: bool
-
-guardrail_agent = Agent(
-    name="Guardrail check",
-    instructions="Check if the output includes any math.",
-    output_type=MathOutput,
-)
-
-@output_guardrail
-async def math_guardrail(
-    ctx: RunContextWrapper, agent: Agent, output: MessageOutput
-) -> GuardrailFunctionOutput:
-    result = await Runner.run(guardrail_agent, output.response, context=ctx.context)
-
-    return GuardrailFunctionOutput(
-        output_info=result.final_output,
-        tripwire_triggered=result.final_output.is_math,
-    )
-
-framework = AgentFramework.OPENAI
-
-agent = AnyAgent.create(
-    framework,
-    AgentConfig(
-        model_id="mistral/mistral-small-latest",
-        instructions="Check if the output contains any math",
-        agent_args={
-            "output_guardrails": [math_guardrail]
-        }
-    )
-)
-```
+The [`agent_args`][any_agent.config.AgentConfig.agent_args] parameter in `AgentConfig` allows you to pass arguments specific to the underlying framework that the agent instance is built on.
 
 ## Running Agents
 
@@ -162,8 +112,8 @@ agent = AnyAgent.create(
 try:
     agent_trace = agent.run("Which Agent Framework is the best??")
     print(agent_trace.final_output)
-except AgentRunError as are:
-    agent_trace = are.trace
+except AgentRunError as e:
+    agent_trace = e.trace
 ```
 
 Check [`AgentTrace`][any_agent.tracing.agent_trace.AgentTrace] for more info on the return type.
@@ -181,7 +131,7 @@ async def main():
     agent = await AnyAgent.create_async(
         "openai",
         AgentConfig(
-            model_id="mistral/mistral-small-latest",
+            model_id="mistral:mistral-small-latest",
             instructions="Use the tools to find an answer",
             tools=[search_web, visit_webpage]
         )
@@ -231,7 +181,7 @@ from any_agent import AgentConfig, AnyAgent
 agent = AnyAgent.create(
     "tinyagent",
     AgentConfig(
-        model_id="mistral/mistral-small-latest",
+        model_id="mistral:mistral-small-latest",
         instructions="You are a helpful assistant. Use previous conversation context when available.",
     )
 )
@@ -281,7 +231,7 @@ from any_agent.tools.user_interaction import send_console_message
 agent = AnyAgent.create(
     "tinyagent",
     AgentConfig(
-        model_id="mistral/mistral-small-latest",
+        model_id="mistral:mistral-small-latest",
         instructions="You are a helpful travel assistant. Send console messages to ask more questions. Do not stop until you've answered the question.",
         tools=[send_console_message]
     )
@@ -298,6 +248,37 @@ print(f"Final recommendations: {agent_trace.final_output}")
 ```
 
 This approach is demonstrated in our [MCP Agent cookbook example](../cookbook/mcp_agent.ipynb), where an agent uses user interaction tools to gather trip planning information dynamically. The agent can ask clarifying questions, get user preferences, and provide personalized recommendations all within a single `run()` call.
+
+
+---
+
+## agents/models.md
+
+<!-- Source: agents/models.md -->
+
+# Model Configuration
+
+## Overview
+
+Model configuration in `any-agent` is designed to be consistent across all supported frameworks. We use [`any-llm`](https://mozilla-ai.github.io/any-llm/) as the default model provider, which acts as a unified interface allowing you to use any language model from any provider with the same syntax.
+
+## Configuration Parameters
+
+The model configuration is defined through several parameters in [`AgentConfig`][any_agent.config.AgentConfig]:
+
+The `model_id` parameter selects which language model your agent will use. The format depends on the provider:
+
+The `model_args` parameter allows you to pass additional arguments to the model, such as `temperature`, `top_k`, and other provider-specific parameters.
+
+The `api_base` parameter allows you to specify a custom API endpoint. This is useful when:
+
+- Using a local model server (e.g., Ollama, llama.cpp, llamafile)
+- Routing through a proxy
+- Using a self-hosted model endpoint
+
+The `api_key` parameter allows you to explicitly specify an API key for authentication. By default, `any-llm` will automatically search for common environment variables (like `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, etc.).å
+
+See the [AnyLLM Provider Documentation](https://mozilla-ai.github.io/any-llm/providers/) for the complete list of supported providers.å
 
 
 ---
@@ -364,10 +345,18 @@ You can see what attributes are available for LLM Calls and Tool Executions by e
 
 ## Implementing Callbacks
 
-All callbacks must inherit from the base [`Callback`][any_agent.callbacks.base.Callback] class and can choose to implement any subset of the available callback methods.
+All callbacks must inherit from the base [`Callback`][any_agent.callbacks.base.Callback] class and can choose to implement any subset of the available callback methods. These methods include:
 
-You can use [`Context.shared`][any_agent.callbacks.context.Context.shared] to store information meant
-to be reused across callbacks:
+| Callback Method | Description |
+|:----------------:|:------------:|
+| before_agent_invocation | Should be used to check the Context before the agent is invoked. |
+| befor_llm_call | Should be used before the chat history hits the LLM. |
+| after_llm_call | Should be used once LLM output is generated, before it appends to the chat history. |
+| before_tool_execution | Should be used to check the Context before tool execution. |
+| after_tool_execution | Should be used once tool has been executed, before the output is appended to chat history. |
+| after_agent_invocation | Should be used before a response is returned from an agent. |
+
+Note that each method operates on Context and that this is the order the methods will be called. You can use [`Context.shared`][any_agent.callbacks.context.Context.shared] to store information meant to be reused across callbacks:
 
 ```python
 from any_agent.callbacks import Callback, Context
@@ -401,7 +390,6 @@ class LimitSearchWeb(Callback):
 
 `any-agent` comes with a set of default callbacks that will be used by default (if you don't pass a value to `AgentConfig.callbacks`):
 
-- [`AddCostInfo`][any_agent.callbacks.span_cost.AddCostInfo]
 - [`ConsolePrintSpan`][any_agent.callbacks.span_print.ConsolePrintSpan]
 
 If you want to disable these default callbacks, you can pass an empty list:
@@ -413,7 +401,7 @@ from any_agent.tools import search_web, visit_webpage
 agent = AnyAgent.create(
     "tinyagent",
     AgentConfig(
-        model_id="mistral/mistral-small-latest",
+        model_id="mistral:mistral-small-latest",
         instructions="Use the tools to find an answer",
         tools=[search_web, visit_webpage],
         callbacks=[]
@@ -592,8 +580,8 @@ Check the reference to find additional supported `agent_args`.
 
 ## Default Model Type
 
-We use [`agno.models.litellm.LiteLLM`](https://docs.agno.com/models/litellm) as default.
-Check the reference to find additional supported `model_args`.
+We use [`any_llm`](https://mozilla-ai.github.io/any-llm/) as the default model provider.
+Check the [AnyLLM documentation](https://mozilla-ai.github.io/any-llm/) for supported providers and `model_args`.
 
 
 ---
@@ -613,8 +601,8 @@ Check the reference to find additional supported `agent_args`.
 
 ## Default Model Type
 
-We use [`google.adk.models.lite_llm.LiteLLM`](https://google.github.io/adk-docs/agents/models/#using-cloud-proprietary-models-via-litellm) as default.
-Check the reference to find additional supported `model_args`.
+We use [`any_llm`](https://mozilla-ai.github.io/any-llm/) as the default model provider.
+Check the [AnyLLM documentation](https://mozilla-ai.github.io/any-llm/) for supported providers and `model_args`.
 
 ## Run args
 
@@ -640,8 +628,8 @@ Check the reference to find additional supported `agent_args`.
 
 ## Default Model Type
 
-We use [`langchain_litellm.ChatLiteLLM`](https://python.langchain.com/docs/integrations/chat/litellm/#chatlitellm)
-Check the reference to find additional supported `model_args`.
+We use [`any_llm`](https://mozilla-ai.github.io/any-llm/) as the default model provider.
+Check the [AnyLLM documentation](https://mozilla-ai.github.io/any-llm/) for supported providers and `model_args`.
 
 ## Run args
 
@@ -666,8 +654,8 @@ Check the reference to find additional supported `agent_args`.
 
 ## Default Model Type
 
-We use [`llama_index.llms.litellm.LiteLLM`](https://docs.llamaindex.ai/en/stable/examples/llm/litellm/) as default.
-Check the reference to find additional supported `model_args`.
+We use [`any_llm`](https://mozilla-ai.github.io/any-llm/) as the default model provider.
+Check the [AnyLLM documentation](https://mozilla-ai.github.io/any-llm/) for supported providers and `model_args`.
 
 
 ---
@@ -687,8 +675,8 @@ Check the reference to find additional supported `agent_args`.
 
 ## Default Model Type
 
-We use [`agents.extensions.models.litellm_model.LitellmModel`](https://openai.github.io/openai-agents-python/ref/extensions/litellm/) as default.
-Check the reference to find additional supported `model_args`.
+We use [`any_llm`](https://mozilla-ai.github.io/any-llm/) as the default model provider.
+Check the [AnyLLM documentation](https://mozilla-ai.github.io/any-llm/) for supported providers and `model_args`.
 
 ## Run args
 
@@ -712,8 +700,8 @@ Check the reference to find additional supported `agent_args`.
 
 ## Default Model Type
 
-We use [`smolagents.LiteLLMModel`](https://huggingface.co/docs/smolagents/reference/models#smolagents.LiteLLMModel) as default.
-Check the reference to find additional supported `model_args`.
+We use [`any_llm`](https://mozilla-ai.github.io/any-llm/) as the default model provider.
+Check the [AnyLLM documentation](https://mozilla-ai.github.io/any-llm/) for supported providers and `model_args`.
 
 ## Run args
 
@@ -743,7 +731,7 @@ from any_agent.config import MCPStdio
 agent = AnyAgent.create(
     "tinyagent",
     AgentConfig(
-        model_id="mistral/mistral-small-latest",
+        model_id="mistral:mistral-small-latest",
         instructions="You must use the available tools to find an answer",
         tools=[
             MCPStdio(
@@ -769,7 +757,11 @@ print(result.final_output)
 
 # Agent Tools
 
-`any-agent` provides 2 options to specify what `tools` are available to your agent: `Callables` and `MCP` ([Model Context Protocol](https://modelcontextprotocol.io/introduction)). In order to support multi-agent systems, any agents served via A2A can also be integrated by wrapping the A2A connection in a callable function tool as described [below](#a2a-tools).
+`any-agent` provides 2 options to specify what `tools` are available to your agent: `Callables` and `MCP` ([Model Context Protocol](https://modelcontextprotocol.io/introduction)).
+
+!!! tip
+
+    Multi-agent can be implemented [using Agents-As-Tools](https://mozilla-ai.github.io/any-agent/agents/tools/#using-agents-as-tools).
 
 You can use any combination of options within the same agent.
 
@@ -790,81 +782,38 @@ from any_agent import AgentConfig
 from any_agent.tools import search_web
 
 main_agent = AgentConfig(
-    model_id="mistral/mistral-small-latest",
+    model_id="mistral:mistral-small-latest",
     tools=[search_web]
 )
 ```
 
+### Composio
 
-## MCP
-
-MCP can either be run locally ([MCPStdio][any_agent.config.MCPStdio]) or you can connect to an MCP that is running elsewhere (using either [MCPSse][any_agent.config.MCPSse] or [MCPStreamableHttp][any_agent.config.MCPStreamableHttp]).
+We have a custom [Composio](https://github.com/ComposioHQ/composio) provider that allows to use
+any [Composio tools](https://docs.composio.dev/toolkits/introduction) in `any-agent`:
 
 !!! tip
 
-    There are tools like [SuperGateway](https://github.com/supercorp-ai/supergateway) providing an easy way to turn a Stdio server into an SSE server.
+    Check the different options for [Fetching and Filtering Composio Tools](https://docs.composio.dev/docs/fetching-tools).
 
-!!! warning
 
-    The SSE remote transport has been deprecated as of [MCP specification version 2025-03-26](https://modelcontextprotocol.io/specification/2025-03-26/basic/transports#streamable-http ). Please use the HTTP Stream Transport instead.
+```python
+from any_agent import AgentConfig
+from any_agent.tools.composio import CallableProvider
+from composio import Composio
 
-=== "MCP (Stdio)"
+cpo = Composio(CallableProvider())
 
-    See the [MCPStdio][any_agent.config.MCPStdio] API Reference.
-
-    ```python
-    from any_agent import AgentConfig
-    from any_agent.config import MCPStdio
-
-    main_agent = AgentConfig(
-        model_id="mistral/mistral-small-latest",
-        tools=[
-            MCPStdio(
-                command="docker",
-                args=["run", "-i", "--rm", "mcp/fetch"],
-                tools=["fetch"]
-            ),
-        ]
+main_agent = AgentConfig(
+    model_id="mistral:mistral-small-latest",
+    tools=cpo.tools.get(
+        user_id="daavoo",
+        toolkits=["GITHUB", "HACKERNEWS"],
     )
-    ```
+)
+```
 
-=== "MCP (Streamable HTTP)"
-
-    See the [MCPStreamableHttp][any_agent.config.MCPStreamableHttp] API Reference.
-
-    ```python
-    from any_agent import AgentConfig
-    from any_agent.config import MCPStreamableHttp
-
-    main_agent = AgentConfig(
-        model_id="mistral/mistral-small-latest",
-        tools=[
-            MCPStreamableHttp(
-                url="http://localhost:8000/mcp"
-            ),
-        ]
-    )
-    ```
-
-=== "MCP (SSE)"
-
-    See the [MCPSse][any_agent.config.MCPSse] API Reference.
-
-    ```python
-    from any_agent import AgentConfig
-    from any_agent.config import MCPSse
-
-    main_agent = AgentConfig(
-        model_id="mistral/mistral-small-latest",
-        tools=[
-            MCPSse(
-                url="http://localhost:8000/sse"
-            ),
-        ]
-    )
-    ```
-
-## Using Agents-As-Tools
+### Using Agents-As-Tools
 
 To directly use one agent as a tool for another agent, `any-agent` provides 3 different approaches:
 
@@ -878,7 +827,7 @@ google_agent = await AnyAgent.create_async(
     "google",
     AgentConfig(
         name="google_expert",
-        model_id="mistral/mistral-small-latest",
+        model_id="mistral:mistral-small-latest",
         instructions="Use the available tools to answer questions about the Google ADK",
         description="An agent that can answer questions about the Google Agents Development Kit (ADK).",
         tools=[search_web]
@@ -936,6 +885,140 @@ main_agent = await AnyAgent.create_async(
         tools=[google_agent_as_tool],
     )
 )
+```
+
+## MCP
+
+MCP can either be run locally ([MCPStdio][any_agent.config.MCPStdio]) or you can connect to an MCP that is running elsewhere (using either [MCPSse][any_agent.config.MCPSse] or [MCPStreamableHttp][any_agent.config.MCPStreamableHttp]).
+
+!!! tip
+
+    There are tools like [SuperGateway](https://github.com/supercorp-ai/supergateway) providing an easy way to turn a Stdio server into an SSE server.
+
+!!! warning
+
+    The SSE remote transport has been deprecated as of [MCP specification version 2025-03-26](https://modelcontextprotocol.io/specification/2025-03-26/basic/transports#streamable-http ). Please use the HTTP Stream Transport instead.
+
+=== "MCP (Stdio)"
+
+    See the [MCPStdio][any_agent.config.MCPStdio] API Reference.
+
+    ```python
+    from any_agent import AgentConfig
+    from any_agent.config import MCPStdio
+
+    main_agent = AgentConfig(
+        model_id="mistral:mistral-small-latest",
+        tools=[
+            MCPStdio(
+                command="docker",
+                args=["run", "-i", "--rm", "mcp/fetch"],
+                tools=["fetch"]
+            ),
+        ]
+    )
+    ```
+
+=== "MCP (Streamable HTTP)"
+
+    See the [MCPStreamableHttp][any_agent.config.MCPStreamableHttp] API Reference.
+
+    ```python
+    from any_agent import AgentConfig
+    from any_agent.config import MCPStreamableHttp
+
+    main_agent = AgentConfig(
+        model_id="mistral:mistral-small-latest",
+        tools=[
+            MCPStreamableHttp(
+                url="http://localhost:8000/mcp"
+            ),
+        ]
+    )
+    ```
+
+=== "MCP (SSE)"
+
+    See the [MCPSse][any_agent.config.MCPSse] API Reference.
+
+    ```python
+    from any_agent import AgentConfig
+    from any_agent.config import MCPSse
+
+    main_agent = AgentConfig(
+        model_id="mistral:mistral-small-latest",
+        tools=[
+            MCPSse(
+                url="http://localhost:8000/sse"
+            ),
+        ]
+    )
+    ```
+
+## Resource Management
+
+When using tools where the python process running the agent is also responsible for managing the lifetime of the tool process (e.g., `MCPStdio`), the agent creates connections that should be properly cleaned up in order to avoid error messages like `RuntimeError: Attempted to exit cancel scope in a different task than it was entered in`.
+
+### Using Context Manager (Recommended)
+
+The recommended approach is to use the async context manager pattern, which automatically handles cleanup:
+
+```python
+import asyncio
+from any_agent import AgentConfig, AnyAgent
+from any_agent.config import MCPStdio
+
+async def main():
+    time_tool = MCPStdio(
+        command="uvx",
+        args=["mcp-server-time"],
+    )
+
+    async with await AnyAgent.create_async(
+        "tinyagent",
+        AgentConfig(
+            model_id="mistral:mistral-small-latest",
+            tools=[time_tool],
+        ),
+    ) as agent:
+        result = await agent.run_async("What time is it?")
+        print(result.final_output)
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+### Manual Cleanup
+
+If you can't use a context manager, you can manually clean up resources:
+
+```python
+import asyncio
+from any_agent import AgentConfig, AnyAgent
+from any_agent.config import MCPStdio
+
+async def main():
+    time_tool = MCPStdio(
+        command="uvx",
+        args=["mcp-server-time"],
+    )
+
+    agent = await AnyAgent.create_async(
+        "tinyagent",
+        AgentConfig(
+            model_id="mistral:mistral-small-latest",
+            tools=[time_tool],
+        ),
+    )
+
+    try:
+        result = await agent.run_async("What time is it?")
+        print(result.final_output)
+    finally:
+        await agent.cleanup_async()
+
+if __name__ == "__main__":
+    asyncio.run(main())
 ```
 
 
@@ -1050,7 +1133,7 @@ from any_agent.tools import search_web
 agent = AnyAgent.create(
     "openai",
     agent_config=AgentConfig(
-            model_id="mistral/mistral-small-latest",
+            model_id="mistral:mistral-small-latest",
             tools=[search_web],
     )
 )
@@ -1154,7 +1237,7 @@ from any_agent.tools import search_web
 agent = AnyAgent.create(
     "tinyagent",
     AgentConfig(
-        model_id="mistral/mistral-small-latest",
+        model_id="mistral:mistral-small-latest",
         tools=[search_web]
     ),
 )
@@ -1200,7 +1283,7 @@ from any_agent.evaluation import LlmJudge
 agent = AnyAgent.create(
     "tinyagent",
     AgentConfig(
-        model_id="mistral/mistral-small-latest",
+        model_id="mistral:mistral-small-latest",
         tools=[search_web]
     ),
 )
@@ -1212,7 +1295,7 @@ trace = agent.run(
 )
 
 # Evaluate the quality of the agent's response multiple times
-judge = LlmJudge(model_id="mistral/mistral-small-latest")
+judge = LlmJudge(model_id="mistral:mistral-small-latest")
 evaluation_questions = [
     "Did it provide clear, step-by-step instructions?",
     "Was the tone empathetic and appropriate for a frustrated, non-technical customer?",
@@ -1259,7 +1342,7 @@ The `AgentJudge` automatically has access to these evaluation tools:
 from any_agent.evaluation import AgentJudge
 
 # Create an agent judge
-judge = AgentJudge(model_id="mistral/mistral-small-latest")
+judge = AgentJudge(model_id="mistral:mistral-small-latest")
 
 # Evaluate with access to trace inspection tools
 eval_trace = judge.run(
@@ -1289,7 +1372,7 @@ def current_ios_version() -> str:
     """
     return "iOS 18.5"
 
-judge = AgentJudge(model_id="mistral/mistral-small-latest")
+judge = AgentJudge(model_id="mistral:mistral-small-latest")
 eval_trace = judge.run(
     trace=trace,
     question="Does the final answer provided by the trace mention and correctly specify the most recent major version of iOS? If the final answer does not mention the version at all, this criteria should fail",
@@ -1311,7 +1394,7 @@ class DetailedEvaluation(BaseModel):
     suggestions: list[str]
 
 judge = LlmJudge(
-    model_id="mistral/mistral-small-latest",
+    model_id="mistral:mistral-small-latest",
     output_type=DetailedEvaluation
 )
 
@@ -1363,7 +1446,7 @@ For illustrative purposes, we are going to define 2 separate scripts, each defin
             "google",
             AgentConfig(
                 name="google_expert",
-                model_id="mistral/mistral-small-latest",
+                model_id="mistral:mistral-small-latest",
                 instructions="You can answer questions about the Google Agents Development Kit (ADK) but nothing else",
                 description="An agent that can answer questions specifically and only about the Google Agents Development Kit (ADK).",
                 tools=[search_web]
@@ -1404,7 +1487,7 @@ For illustrative purposes, we are going to define 2 separate scripts, each defin
             "openai",
             AgentConfig(
                 name="openai_expert",
-                model_id="mistral/mistral-small-latest",
+                model_id="mistral:mistral-small-latest",
                 instructions="You can answer questions about the OpenAI Agents SDK but nothing else.",
                 description="An agent that can answer questions specifically and only about the OpenAI Agents SDK.",
                 tools=[search_web]
@@ -1514,8 +1597,6 @@ Check out our cookbook example for building and serving an agent via A2A:
 ::: any_agent.callbacks.base.Callback
 
 ::: any_agent.callbacks.context.Context
-
-::: any_agent.callbacks.span_cost.AddCostInfo
 
 ::: any_agent.callbacks.span_print.ConsolePrintSpan
 
