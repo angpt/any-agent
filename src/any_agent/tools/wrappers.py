@@ -105,6 +105,11 @@ def _wrap_tool_tiny(tool: Tool) -> Tool:
     return tool
 
 
+def _wrap_tool_msft(tool: Tool) -> Tool:
+    # MSFT Agent Framework accepts callables directly as tools
+    return tool
+
+
 WRAPPERS: dict[AgentFramework, Callable[..., Any]] = {
     AgentFramework.GOOGLE: _wrap_tool_google,
     AgentFramework.OPENAI: _wrap_tool_openai,
@@ -113,6 +118,7 @@ WRAPPERS: dict[AgentFramework, Callable[..., Any]] = {
     AgentFramework.LLAMA_INDEX: _wrap_tool_llama_index,
     AgentFramework.AGNO: _wrap_tool_agno,
     AgentFramework.TINYAGENT: _wrap_tool_tiny,
+    AgentFramework.MSFT: _wrap_tool_msft,
 }
 
 

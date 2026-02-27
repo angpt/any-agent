@@ -19,6 +19,7 @@ LLM_IMPORT_PATHS = {
     AgentFramework.OPENAI: "any_llm.AnyLLM.acompletion",
     AgentFramework.SMOLAGENTS: "any_llm.AnyLLM.acompletion",
     AgentFramework.LLAMA_INDEX: "any_llm.AnyLLM.acompletion",
+    AgentFramework.MSFT: "agent_framework.ChatAgent.run",
 }
 
 

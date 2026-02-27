@@ -31,7 +31,7 @@ pip install any-agent
 Or you can install it with the required dependencies for different frameworks:
 
 ```bash
-pip install any-agent[agno,openai]
+pip install 'any-agent[agno,msft,openai]'
 ```
 
 Refer to [pyproject.toml](https://github.com/mozilla-ai/any-agent/blob/main/pyproject.toml) for a list of the options available.

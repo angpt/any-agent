@@ -14,6 +14,7 @@ nav:
       - Google ADK: agents/frameworks/google_adk.md
       - Langchain: agents/frameworks/langchain.md
       - LlamaIndex: agents/frameworks/llama_index.md
+      - Microsoft Agent Framework: agents/frameworks/msft.md
       - OpenAI Agents SDK: agents/frameworks/openai.md
       - smolagents: agents/frameworks/smolagents.md
       - TinyAgent: agents/frameworks/tinyagent.md

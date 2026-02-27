@@ -8,6 +8,7 @@ from .agno import _AgnoSpanGeneration
 from .google import _GoogleSpanGeneration
 from .langchain import _LangchainSpanGeneration
 from .llama_index import _LlamaIndexSpanGeneration
+from .msft import _MsftSpanGeneration
 from .openai import _OpenAIAgentsSpanGeneration
 from .smolagents import _SmolagentsSpanGeneration
 from .tinyagent import _TinyAgentSpanGeneration
@@ -17,6 +18,7 @@ SpanGeneration = (
     | _GoogleSpanGeneration
     | _LangchainSpanGeneration
     | _LlamaIndexSpanGeneration
+    | _MsftSpanGeneration
     | _OpenAIAgentsSpanGeneration
     | _SmolagentsSpanGeneration
     | _TinyAgentSpanGeneration
@@ -46,5 +48,8 @@ def _get_span_generation_callback(
 
     if framework is AgentFramework.TINYAGENT:
         return _TinyAgentSpanGeneration()
+
+    if framework is AgentFramework.MSFT:
+        return _MsftSpanGeneration()
 
     assert_never(framework)

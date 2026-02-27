@@ -8,6 +8,7 @@ from .agno import _AgnoWrapper
 from .google import _GoogleADKWrapper
 from .langchain import _LangChainWrapper
 from .llama_index import _LlamaIndexWrapper
+from .msft import _MsftWrapper
 from .openai import _OpenAIAgentsWrapper
 from .smolagents import _SmolagentsWrapper
 from .tinyagent import _TinyAgentWrapper
@@ -20,6 +21,7 @@ def _get_wrapper_by_framework(
     | _GoogleADKWrapper
     | _LangChainWrapper
     | _LlamaIndexWrapper
+    | _MsftWrapper
     | _OpenAIAgentsWrapper
     | _SmolagentsWrapper
     | _TinyAgentWrapper
@@ -44,5 +46,8 @@ def _get_wrapper_by_framework(
 
     if framework is AgentFramework.TINYAGENT:
         return _TinyAgentWrapper()
+
+    if framework is AgentFramework.MSFT:
+        return _MsftWrapper()
 
     assert_never(framework)

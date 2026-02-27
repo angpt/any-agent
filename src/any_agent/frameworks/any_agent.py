@@ -257,6 +257,11 @@ class AnyAgent(ABC):
 
             return TinyAgent
 
+        if framework is AgentFramework.MSFT:
+            from any_agent.frameworks.msft import MsftAgent
+
+            return MsftAgent
+
         assert_never(framework)
 
     @classmethod

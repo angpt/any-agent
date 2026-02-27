@@ -22,21 +22,9 @@ A single interface to use and evaluate different agent frameworks.
 
 ## [Documentation](https://mozilla-ai.github.io/any-agent/)
 
-- [Agents](https://mozilla-ai.github.io/any-agent/agents/)
-- [Tools](https://mozilla-ai.github.io/any-agent/agents/tools/)
-- [Tracing](https://mozilla-ai.github.io/any-agent/tracing/)
-- [Serving](https://mozilla-ai.github.io/any-agent/serving/)
-- [Evaluation](https://mozilla-ai.github.io/any-agent/evaluation/)
-
 ## [Supported Frameworks](https://mozilla-ai.github.io/any-agent/)
 
-[![TinyAgent](https://img.shields.io/badge/TinyAgent-ffcb3a?logo=huggingface&logoColor=white)](https://huggingface.co/blog/tiny-agents) [![Google ADK](https://img.shields.io/badge/Google%20ADK-4285F4?logo=google&logoColor=white)](https://github.com/google/adk-python) [![LangChain](https://img.shields.io/badge/LangChain-1e4545?logo=langchain&logoColor=white)](https://github.com/langchain-ai/langgraph) [![LlamaIndex](https://img.shields.io/badge/🦙%20LlamaIndex-fbcfe2)](https://github.com/run-llama/llama_index) [![OpenAI Agents](https://img.shields.io/badge/OpenAI%20Agents-black?logo=openai)](https://github.com/openai/openai-agents-python) [![Smolagents](https://img.shields.io/badge/Smolagents-ffcb3a?logo=huggingface&logoColor=white)](https://github.com/huggingface/smolagents) [![Agno AI](https://img.shields.io/badge/Agno-ff4017)](https://github.com/agno-agi/agno)
-
-
-
-### Planned for Support (Contributions Welcome!)
-
-[Open Github tickets for new frameworks](https://github.com/mozilla-ai/any-agent/issues?q=is%3Aissue%20state%3Aopen%20label%3Aframeworks)
+[![Agno AI](https://img.shields.io/badge/Agno-ff4017)](https://github.com/agno-agi/agno) [![Google ADK](https://img.shields.io/badge/Google%20ADK-4285F4?logo=google&logoColor=white)](https://github.com/google/adk-python) [![LangChain](https://img.shields.io/badge/LangChain-1e4545?logo=langchain&logoColor=white)](https://github.com/langchain-ai/langgraph) [![LlamaIndex](https://img.shields.io/badge/🦙%20LlamaIndex-fbcfe2)](https://github.com/run-llama/llama_index) [![Microsoft Agent Framework](https://img.shields.io/badge/Microsoft%20Agent%20Framework-0078D4?logo=microsoft&logoColor=white)](https://github.com/microsoft/agent-framework) [![OpenAI Agents](https://img.shields.io/badge/OpenAI%20Agents-black?logo=openai)](https://github.com/openai/openai-agents-python) [![Smolagents](https://img.shields.io/badge/Smolagents-ffcb3a?logo=huggingface&logoColor=white)](https://github.com/huggingface/smolagents) [![TinyAgent](https://img.shields.io/badge/TinyAgent-ffcb3a?logo=huggingface&logoColor=white)](https://huggingface.co/blog/tiny-agents)
 
 ## Requirements
 
@@ -44,11 +32,10 @@ A single interface to use and evaluate different agent frameworks.
 
 ## Quickstart
 
-Refer to [pyproject.toml](./pyproject.toml) for a list of the options available.
-Update your pip install command to include the frameworks that you plan on using:
+Install with the extras for the frameworks you plan to use:
 
 ```bash
-pip install 'any-agent'
+pip install 'any-agent[openai]'  # or agno, google, langchain, llama_index, msft, smolagents
 ```
 
 To define any agent system you will always use the same imports:
@@ -96,12 +83,12 @@ Get started quickly with these practical examples:
 
 ## Contributions
 
-The AI agent space is moving fast! If you see a new agentic framework that AnyAgent doesn't yet support, we would love for you to create a Github issue. We also welcome your support in development of additional features or functionality.
+The AI agent space is moving fast! If you see a new agentic framework that AnyAgent doesn't yet support, we would love for you to [open a GitHub issue](https://github.com/mozilla-ai/any-agent/issues?q=is%3Aissue%20state%3Aopen%20label%3Aframeworks). We also welcome your support in development of additional features or functionality.
 
 
 ## Running in Jupyter Notebook
 
-If running in Jupyter Notebook you will need to add the following two lines before running AnyAgent, otherwise you may see the error `RuntimeError: This event loop is already running`. This is a known limitation of Jupyter Notebooks, see [Github Issue](https://github.com/jupyter/notebook/issues/3397#issuecomment-376803076)
+If running in Jupyter Notebook you will need to add the following two lines before running AnyAgent, otherwise you may see the error `RuntimeError: This event loop is already running`. This is a known limitation of Jupyter Notebooks, see [GitHub Issue](https://github.com/jupyter/notebook/issues/3397#issuecomment-376803076)
 
 ```python
 import nest_asyncio

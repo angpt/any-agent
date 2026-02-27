@@ -52,6 +52,10 @@ a2a = [
   "httpx",
 ]
 
+msft = [
+  "agent-framework>=1.0.0b260106",
+]
+
 composio = [
   "composio>=0.8.14"
 ]
@@ -146,6 +150,10 @@ disallow_untyped_decorators = false # mypy gets confused by pytest decorators
 [[tool.mypy.overrides]]
 module = ["pytest", "mktestdocs", "pytest_lazy_fixtures", "syrupy.assertion"]
 ignore_missing_imports = true # pytest related modules are not found
+
+[[tool.mypy.overrides]]
+module = ["agent_framework", "agent_framework.*"]
+ignore_missing_imports = true # optional dependency, not included in `all`
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

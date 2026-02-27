@@ -34,6 +34,10 @@ Here is what the console output looks like:
 
     {% include "../tests/assets/LLAMA_INDEX_trace.html" %}
 
+=== "MSFT"
+
+    {% include "../tests/assets/MSFT_trace.html" %}
+
 === "OPENAI"
 
     {% include "../tests/assets/OPENAI_trace.html" %}
@@ -75,6 +79,11 @@ Here's what the returned [`agent_trace.spans`][any_agent.tracing.agent_trace.Age
 === "LLAMA_INDEX"
     ~~~json
     {% include "../tests/assets/LLAMA_INDEX_trace.json" %}
+    ~~~
+
+=== "MSFT"
+    ~~~json
+    {% include "../tests/assets/MSFT_trace.json" %}
     ~~~
 
 === "OPENAI"
